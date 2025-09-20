@@ -15,14 +15,13 @@ const generateTokens = (userId) =>{
     return {accessToken , refreshToken}
 }
 
-const storeRefreshTokens = async (userId,userName, refreshToken) => {
+const storeRefreshTokens = async (userId, refreshToken) => {
   console.log("is it here");
   try {
     const sevenDaysInSeconds = 7 * 24 * 60 * 60;
-    await redis.set(`refresh_token:${userName}`, refreshToken, {
+    await redis.set(`refresh_token:${userId}`, refreshToken, {
       EX: sevenDaysInSeconds
     });
-    console.log(`Successfully stored refresh token for user: ${userId}`);
     
   } catch (error) {
     console.error("Failed to store refresh token in Redis:", error);
@@ -57,7 +56,7 @@ export const signup = async(req , res)=>{
     const user =  await User.create({name,email,password})
     const {accessToken , refreshToken} = generateTokens(user._id)
 
-    await storeRefreshTokens(user._id , user.name , refreshToken)   
+    await storeRefreshTokens(user._id ,refreshToken)   
 
     setCookies(res , accessToken , refreshToken)
 
@@ -73,5 +72,17 @@ export const Login = async(req,res)=>{
 }
 
 export const Logout = async(req,res)=>{
-    res.send("Logged Out successfully");
+    try{
+        const refreshToken = req.cookies.refreshToken
+        if (refreshToken){
+            const decoded = jwt.verify(refreshToken , process.env.REFRESH_TOKEN_SECRET)
+            await redis.del(`refresh_token:${decoded.userId}`)
+        }
+
+        res.clearCookie("accessToken");
+        res.clearCookie("refrestToken");
+        res.status(200).json({message:"person logged out successfully"})
+    }catch(error){
+        res.status(500).json({message:"Server Error" , error:error.message})
+    }
 }
