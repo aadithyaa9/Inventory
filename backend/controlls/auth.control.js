@@ -105,3 +105,46 @@ export const Logout = async(req,res)=>{
         res.status(500).json({message:"Server Error" , error:error.message})
     }
 }
+
+
+export const AccessToken = async(req,res)=>{
+    try{
+        const refreshToken = req.cookies.refreshToken
+
+        if(!refreshToken){
+            return res.status(401).json({message : "NO refresh Token Provided"})
+
+        }
+
+        const decoded = jwt.verify(refreshToken , process.env.REFRESH_TOKEN_SECRET)
+        const stored = await redis.get(`refresh_token:${decoded.userId}`)
+
+        if (refreshToken !== stored){
+            return res.status(401).json({message:"Invalid Refresh Token"})
+
+        }
+
+        const accessToken = jwt.sign({userID:decoded.userId} , process.env.ACCESS_TOKEN_SECRET,{
+        expiresIn:"15m"})
+
+        res.cookie("accessToken" , accessToken , {
+        httpOnly : true,
+        secure:process.env.NODE_ENV === "production",
+        sameSite:"strict",
+        maxAge:15*60*1000   })
+
+
+        res.json({message : "Token refreshed Succesfully"})
+    }
+    catch(error){
+        res.status(500).json({message: "Server Error" , error:error.message})
+    }
+}
+
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2OGNlZWQxZjQzYWY5MTQwYjFhYzcwNmUiLCJpYXQiOjE3NTgzOTIxNTEsImV4cCI6MTc1ODM5MzA1MX0.zTCdkl88tzMk_xek49rSMCPg-Vozq5it1PaSMibWpwo
+
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2OGNlZWQxZjQzYWY5MTQwYjFhYzcwNmUiLCJpYXQiOjE3NTgzOTI4NTMsImV4cCI6MTc1ODM5Mzc1M30.jWXFWaUPtruFlX7M3wzmOzLYbVhsJ20JjiuAXewe6mg
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2OGNlZWQxZjQzYWY5MTQwYjFhYzcwNmUiLCJpYXQiOjE3NTgzOTI5MjAsImV4cCI6MTc1ODM5MzgyMH0.i5LQXm3Xu29V0e7tT3lvdoR6CWzEg-evO6TOYYsFlOoeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2OGNlZWQxZjQzYWY5MTQwYjFhYzcwNmUiLCJpYXQiOjE3NTgzOTI5MjAsImV4cCI6MTc1ODM5MzgyMH0.i5LQXm3Xu29V0e7tT3lvdoR6CWzEg-evO6TOYYsFlOo
