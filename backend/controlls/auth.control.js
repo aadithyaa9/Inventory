@@ -68,7 +68,26 @@ export const signup = async(req , res)=>{
 }
 
 export const Login = async(req,res)=>{
-    res.send("Login called")
+    try{
+        const {email , password} = req.body
+        const user = await User.findOne({email})
+        if (user && (await user.comparer(password))){
+            const {accessToken , refreshToken} = generateTokens(user._id)
+            await storeRefreshTokens(user._id , refreshToken)
+            setCookies(res , accessToken , refreshToken)
+
+            res.json({
+                _id : user._id,
+                name: user.name,
+                role: user.role
+            })
+        }
+        else{
+            res.status(401).json({message : "Invalid Email or Password"});
+        }
+    }catch(error){
+        res.status(500).json({message : "Server Error"  , error : error.message})
+    }
 }
 
 export const Logout = async(req,res)=>{
