@@ -15,11 +15,11 @@ const generateTokens = (userId) =>{
     return {accessToken , refreshToken}
 }
 
-const storeRefreshTokens = async (userId, refreshToken) => {
+const storeRefreshTokens = async (userId,userName, refreshToken) => {
   console.log("is it here");
   try {
     const sevenDaysInSeconds = 7 * 24 * 60 * 60;
-    await redis.set(`refresh_token:${userId}`, refreshToken, {
+    await redis.set(`refresh_token:${userName}`, refreshToken, {
       EX: sevenDaysInSeconds
     });
     console.log(`Successfully stored refresh token for user: ${userId}`);
@@ -57,7 +57,7 @@ export const signup = async(req , res)=>{
     const user =  await User.create({name,email,password})
     const {accessToken , refreshToken} = generateTokens(user._id)
 
-    await storeRefreshTokens(user._id , refreshToken)   
+    await storeRefreshTokens(user._id , user.name , refreshToken)   
 
     setCookies(res , accessToken , refreshToken)
 
