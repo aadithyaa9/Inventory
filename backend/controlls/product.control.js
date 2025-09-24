@@ -86,3 +86,25 @@ export const detleteProduct = async(req,res)=>{
         res.status(500).json({message:"Errror message" , error:error.message})
     }
 }
+
+export const getRecommendations = async(req,res)=>{
+    try{
+        const products = await Product.aggregate([
+            {
+                $sample:{size:3},
+            },
+
+            {
+                $project:{
+                    _id:1,price:1
+                }
+            }
+        ])
+
+        res.json(products)
+    }
+    catch(error){
+        console.log("ERROR recommending the products to both the user and the admin as well")
+        res.status(500).json({message:"Errror message" , error:error.message})
+    }
+}
