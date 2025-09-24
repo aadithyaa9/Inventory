@@ -1,5 +1,6 @@
 import Product from "../models/product.model.js"
 import { redis } from "../library/redis.js"
+import cloudinary  from "../library/cloudinary.js"
 
 export const getAllProducts = async(req , res) =>{
     try{
@@ -32,5 +33,56 @@ export const getFeaturedProducts = async(req , res) =>{
     catch(error){
         console.log("ERROR FETCHING FEATURED PRODUCTS , UNEXPECTED ERROR OCCURED")
         res.status(500).json({message : "Server Error"})
+    }
+}
+
+export const UploadProducts = async(req,res)=>{
+    try{
+        const {name , description , price , image ,category} = req.body;
+        let cloudresp = null;
+        if(image){
+            cloudresp = await cloudinary.uploader.upload(image , {folder:"Product"})
+        }
+        const item = await Product.create({
+            name,description ,price,image:cloudresp?.secure_url ? cloudresp?.secure_url : "" ,category
+        })
+
+        res.status(201).json({item})
+    }catch(error){
+        console.log("Difficulty in uploading the product")
+
+        res.status(500).json({message:"ServerError" , error:error.message})
+
+    }
+}
+
+
+export const detleteProduct = async(req,res)=>{
+    try{
+
+        const {id} = req.params.body;
+        const tobeDeleted = await Product.findById({id})
+
+        if (!tobeDeleted){
+            return res.status(404).json({message : "Product not found"})
+        }
+
+        if(tobeDeleted.image){
+            const path = tobeDeleted.image.split("/").pop().split(".")[0]
+            try{
+                await cloudinary.uploader.destroy(`products/${path}`)
+
+            }catch(error){
+                return res.status(404).json({message : "Product image not found"})
+            }
+        }
+
+        await Product.findByIdAndDelete(req.params.id)
+
+        res.json({message:"Product deleted Succefully"})
+
+    }catch(error){
+        console.log("THIS IS THE ERROR I AM GETTING , WHICH MEANS ERROR IN FINDING THE RIGHT ID FOR THE PROJECT")
+        res.status(500).json({message:"Errror message" , error:error.message})
     }
 }
