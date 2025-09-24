@@ -108,3 +108,47 @@ export const getRecommendations = async(req,res)=>{
         res.status(500).json({message:"Errror message" , error:error.message})
     }
 }
+
+export const filterProducts = async(req ,res)=>{
+    const {cat} = req.params
+    try{
+        const products = await Product.find({cat});
+        res.json({products})
+
+    }
+    catch(error){
+        console.log("Error FIletring the products")
+        res.status(500).json({error : error.message})
+    }
+}
+
+
+export const featureUpdate = async(req,res)=>{
+    const {id} = req.params
+    try{
+        const products = await Product.findById({id})
+        if(products){
+            products.isFeatured = !products.isFeatured
+            const saver = await products.save()
+            await updateCache()
+            res.json({products})
+        }
+    }catch(error){
+        res.status(500).json({error : error.message})
+    }
+}
+
+
+
+async function updateCache() {
+    try{
+    const products = await Product.find({isFeatured :true}).lean()
+    if(products){
+        await redis.set("featured_Products" , JSON.stringify(products))
+    }
+}
+catch(error){
+
+    console.log("REDIS UPSTASH NOT WORKING")
+}
+}
